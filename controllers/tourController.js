@@ -136,10 +136,6 @@ exports.deleteTour = catchAsync(async (req, res, next) => {
       tour,
     },
   });
-  res.status(400).json({
-    status: "fail",
-    message: err,
-  });
 });
 
 exports.getTourStats = catchAsync(async (req, res, next) => {
