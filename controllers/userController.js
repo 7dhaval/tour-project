@@ -10,7 +10,12 @@ const filterObj = (obj, ...allowedFields) => {
         if(allowedFields.includes(el)) newObj[el] = obj[el];
     });
     return newObj;
-}
+};
+
+exports.getMe = (req, res, next) => {
+    req.params.id = req.user.id;
+    next();
+};
 
 exports.getAllUsers = catchAsync(async(req, res, next) => {
     const users = await User.find();
