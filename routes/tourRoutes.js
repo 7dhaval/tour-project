@@ -3,7 +3,7 @@ const tourController = require("./../controllers/tourController");
 const router = express.Router();
 const authController = require("../controllers/authController");
 // const reviewController = require("../controllers/reviewController");
-const reviewRouter = require('./../routes/reviewRoutes');
+const reviewRouter = require("./../routes/reviewRoutes");
 
 // router.param("id", tourController.checkID);
 
@@ -12,24 +12,38 @@ const reviewRouter = require('./../routes/reviewRoutes');
 //if not send back 400 (bad request)
 //Add it to the post handler stack
 
-router.use('/:tourId/reviews', reviewRouter);
+router.use("/:tourId/reviews", reviewRouter);
 
 router
   .route("/top-5-cheap")
   .get(tourController.aliasTopTours, tourController.getAlltours);
 
 router.route("/tour-stats").get(tourController.getTourStats);
-router.route("/monthly-plan/:year").get(tourController.getMonthlyPlan);
+router
+  .route("/monthly-plan/:year")
+  .get(
+    authController.protect,
+    authController.restrictTo("admin", "lead-guide", "guide"),
+    tourController.getMonthlyPlan
+  );
 
 router
   .route("/")
-  .get(authController.protect, tourController.getAlltours)
-  .post(tourController.createTour);
+  .get(tourController.getAlltours)
+  .post(
+    authController.protect,
+    authController.restrictTo("admin", "lead-guide"),
+    tourController.createTour
+  );
 
 router
   .route("/:id")
   .get(tourController.getTour)
-  .patch(tourController.updateTour)
+  .patch(
+    authController.protect,
+    authController.restrictTo("admin", "lead-guide"),
+    tourController.updateTour
+  )
   .delete(
     authController.protect,
     authController.restrictTo("admin", "lead-guide"),
