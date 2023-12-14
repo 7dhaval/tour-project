@@ -12,49 +12,49 @@ exports.aliasTopTours = (req, res, next) => {
 };
 
 // exports.getAlltours = catchAsync(async (req, res, next) => {
-  //Build query
-  // //1A) Filtering
-  // const queryObj = {...req.query};
-  // const excludeFields = ['page', 'sort', 'limit', 'fields'];
+//Build query
+// //1A) Filtering
+// const queryObj = {...req.query};
+// const excludeFields = ['page', 'sort', 'limit', 'fields'];
 
-  // excludeFields.forEach(el => delete queryObj[el]);
+// excludeFields.forEach(el => delete queryObj[el]);
 
-  // // 1B) Advanced Filtering
-  // let queryStr = JSON.stringify(queryObj);
-  // queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
+// // 1B) Advanced Filtering
+// let queryStr = JSON.stringify(queryObj);
+// queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
 
-  // let query = Tour.find(JSON.parse(queryStr));
+// let query = Tour.find(JSON.parse(queryStr));
 
-  // //2) Sorting
-  // if(req.query.sort){
-  //   const sortBy = req.query.sort.split(',').join(' ');
-  //   console.log(sortBy);
-  //   query= query.sort(sortBy)
-  // } else{
-  //   query = query.sort('-createdAt');
-  // };
+// //2) Sorting
+// if(req.query.sort){
+//   const sortBy = req.query.sort.split(',').join(' ');
+//   console.log(sortBy);
+//   query= query.sort(sortBy)
+// } else{
+//   query = query.sort('-createdAt');
+// };
 
-  // //3)Fild limmiting
-  // if(req.query.fields){
-  //   const fields = req.query.fields.split(',').join(' ');
-  //   query = query.select(fields);
-  // }else{
-  //   query = query.select('');
-  // };
+// //3)Fild limmiting
+// if(req.query.fields){
+//   const fields = req.query.fields.split(',').join(' ');
+//   query = query.select(fields);
+// }else{
+//   query = query.select('');
+// };
 
-  // //4) Pagination
-  // const page = req.query.page * 1 || 1;
-  // const limit = req.query.limit * 1 || 100;
-  // const skip = (page -1) * limit;
-  // //page=3&limit10, 1-10, page 1, 11-20, page 2, 21-30 page 3
-  // query = query.skip(skip).limit(limit);
+// //4) Pagination
+// const page = req.query.page * 1 || 1;
+// const limit = req.query.limit * 1 || 100;
+// const skip = (page -1) * limit;
+// //page=3&limit10, 1-10, page 1, 11-20, page 2, 21-30 page 3
+// query = query.skip(skip).limit(limit);
 
-  // if (req.query.page){
-  //   const numTours = await Tour.countDocuments();
-  //   if(skip >= numTours) throw new Error('This Page is Not Exits :(')
-  // }
+// if (req.query.page){
+//   const numTours = await Tour.countDocuments();
+//   if(skip >= numTours) throw new Error('This Page is Not Exits :(')
+// }
 
-  //execute query
+//execute query
 //   const features = new APIFeatures(Tour.find(), req.query)
 //     .filter()
 //     .sort()
@@ -215,5 +215,77 @@ exports.getMonthlyPlan = catchAsync(async (req, res, next) => {
     data: {
       plan,
     },
+  });
+});
+
+exports.getToursWithIn = catchAsync(async (req, res, next) => {
+  const { distance, latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(",");
+
+  const radius = unit === "mi" ? distance / 3963.2 : distance / 6378.1;
+
+  if (!lat || !lng) {
+    next(
+      new AppError(
+        "Please provide latitur and longitude in the format of lat,lng",
+        400
+      )
+    );
+  }
+
+  const tours = await Tour.find({
+    startLocation: { $geoWithin: { $centerSphere: [[lng, lat], radius] } },
+  });
+
+  res.status(200).json({
+    status: "success",
+    results: tours.length,
+    data: {
+      data: tours,
+    },
+  });
+});
+
+
+
+exports.getDistances = catchAsync(async (req, res, next) => {
+  const { latlng, unit } = req.params;
+  const [lat, lng] = latlng.split(',');
+
+  const multiplier = unit === 'mi' ? 0.000621371 : 0.001;
+
+  if (!lat || !lng) {
+    next(
+      new AppError(
+        'Please provide latitutr and longitude in the format lat,lng.',
+        400
+      )
+    );
+  }
+
+  const distances = await Tour.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [lng * 1, lat * 1]
+        },
+        distanceField: 'distance',
+        distanceMultiplier: multiplier
+      }
+    },
+    {
+      $project: {
+        distance: 1,
+        name: 1
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    status: 'success',
+    data: {
+      data: distances
+    }
   });
 });
